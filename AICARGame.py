@@ -1,9 +1,8 @@
 import  cv2
-import numpy as np
-import time
-import autopy
+from pynput.keyboard import Key, Controller
 import mediapipe as mp
 import  math
+import time
 
 #define the size of camera window
 wCan, hCan = 640,480
@@ -15,6 +14,14 @@ cap.set(4,hCan)
 
 hands = mp.solutions.hands.Hands(False,2,.5,.5)
 mpDwaw = mp.solutions.drawing_utils
+
+setaDir = cv2.imread('seta direita.png')
+setaEsq = cv2.imread('seta esquerda.png')
+
+setaDir = cv2.resize(setaDir,(100,100))
+setaEsq = cv2.resize(setaEsq,(100,100))
+
+kb = Controller()
 
 while True:
     myhands = []
@@ -30,7 +37,7 @@ while True:
                 myHand.append((int(Landmark.x*wCan),int(Landmark.y*hCan)))
 
             myhands.append(myHand)
-            posicao = 20 #ponto posição da mão
+            posicao = 11 #ponto posição da mão (mindinho)
 
             #print(len(myhands))
             if len(myhands) >=2:
@@ -53,11 +60,16 @@ while True:
                 lenth = math.hypot(x2 - x1, y2 - y1)
 
                 #print(lenth)
-                if (lenth >=130) and (lenth <=270):
+                if (lenth >=100) and (lenth <=250):
+                    kb.press(Key.up)
+                else:
+                    kb.release(Key.up)
+
+                if (lenth >= 200) and (lenth <= 400):
                     cv2.line(img, (x1, y1), (x2, y2), (92, 152, 0), 3)
                     cv2.circle(img, (cx, cy), 15, (92, 152, 0), cv2.FILLED)
                     # separar mão da essquerda e direita
-                    if x1 <x2:
+                    if x1 >x2:
                         moEsqX = x1
                         moEsqY = y1
                         moDirX = x2
@@ -68,16 +80,42 @@ while True:
                         moDirX = x1
                         moDirY = y1
 
+                    print(moEsqY-moDirY)
+                    diff = (moEsqY-moDirY) #direita sobe (positivo) esqueda sobe (negativo)
+                    h_img, w_img, _ = img.shape
+                    h_seta, w_seta, _ = setaDir.shape
+
+                    center_y = int(h_img / 2)
+                    center_x = int(w_img / 2)
+                    # calculating from top, bottom, right and left
+                    top_y = center_y - int(h_seta / 2)
+                    left_x = center_x - int(w_seta / 2)
+                    bottom_y = top_y + h_seta
+                    right_x = left_x + w_seta
+
+                    if diff >=100:
+                        # adding setas to the image
+                        #kb.release(Key.up)
+                        kb.press(Key.left)
+                        img[top_y - 150:bottom_y - 150, left_x - 250:right_x - 250] = setaEsq ## direita da tela
+                    elif diff <=-100:
+                        #kb.release(Key.up)
+                        kb.press(Key.right)
+                        img[top_y - 150:bottom_y - 150, left_x + 250:right_x + 250] = setaDir  # esquerda da tela
+                    else:
+                        kb.release(Key.left)
+                        kb.release(Key.right)
+
+
                     cv2.putText(img,"ESQUERDA",(moEsqX-50,moEsqY+50),cv2.FONT_HERSHEY_SIMPLEX,1,(255, 0, 0),3)
                     cv2.putText(img, "DIREITA", (moDirX - 50, moDirY + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
-
-
-
-
 
 
 
             #print(myhands)
 
     cv2.imshow('Imagem',img)
+    #cv2.imshow('Dir',setaDir)
+    #cv2.imshow('Esq', setaEsq)
+
     cv2.waitKey(1)
